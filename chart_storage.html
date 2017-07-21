@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<meta http-equiv="Cache-Control" content="No-Cache">
+		
+		<title>ITAhM</title>
+		
+		<style>
+		
+@import "css/itahm.css";
+
+body {
+	position: fixed; top: 0; right: 0; bottom: 0; left: 0;
+	margin: 0; padding: 0;
+	display: flex;
+	flex-direction: column;
+	color: #fff;
+}
+
+@media print {
+	body {
+		color: #000;
+	}
+}
+
+iframe {
+	border: none;
+	padding: 0; margin: 0;
+	flex: 1;
+	min-height: 80px;
+}
+
+header {
+	position: relative;
+}
+
+h1 {
+	color: #fff;
+	margin: 0;
+}
+
+h2 {
+	text-align: center;
+	position: absolute; top: 0; left: 0; right: 0;
+}
+
+#legend {
+	text-align: right;
+}
+
+		</style>
+		<script>
+		
+/**
+ * public
+ */
+function initialize(from, to, start, end) {
+	var entry = top.snmp.hrStorageEntry[window.resourceIndex],
+		request = {
+			command: "query",
+			ip: top.ip,
+			summary: true,
+			database: "hrStorageUsed",
+			index: window.resourceIndex,
+			start: from,
+			end: to
+		};
+	
+	window.max = entry.hrStorageSize * entry.hrStorageAllocationUnits;
+	window.start = start;
+	window.end = end;
+	
+	top.sendRequest(request, onSummaryResponse);
+	
+	document.getElementById("storage_name").textContent = entry.hrStorageDescr;
+	document.getElementById("legend").textContent = "Storage volume : "+ ITAhM.util.toBytesString(max);
+}
+
+/**
+ * private
+ */
+function onSummaryResponse(data) {
+	chartWindow.initialize(new ITAhM.ChartSummaryData(data), window.max, "#9d9789", onValueToString);
+	
+	drawStorage();
+}
+
+/**
+ * private
+ */
+function onDetailResponse(data) {
+	window.chartWindow.detail(new ITAhM.ChartData(data));
+}
+
+function onValueToString(value) {
+	return ITAhM.util.toBytesString(value).replace("ytes", "");
+}
+
+/**
+ * private
+ */
+function sendDetailRequest() {
+	top.sendRequest({
+		command: "query",
+		ip: top.ip,
+		summary: false,
+		database: "hrStorageUsed",
+		index: window.resourceIndex,
+		start: window.start,
+		end: window.end
+	}, onDetailResponse);
+}
+
+/**
+ * private
+ */
+function drawStorage() {
+	var date = new Date(window.start);
+	
+	if (window.chartWindow.draw(window.start, window.end) && date.setDate(date.getDate() +1) === window.end) {
+		sendDetailRequest();
+	}
+}
+
+/**
+ * public
+ */
+function draw(start, end) {
+	window.start = start;
+	window.end = end;
+	
+	drawStorage();
+}
+
+/**
+ * public
+ */
+function buildSummaryFile() {
+	var summaryData = window.chartWindow.summaryData,
+		chartSummary = window.chartWindow.chartSummary,
+		blocks, row, block, date, mills, value, k = 0;
+	
+	row = ["index,date,max,avg,min"];
+
+	if (chartSummary) {
+		blocks = chartSummary.keys;
+		
+		for (var i=0, _i=blocks.length; i<_i; i++) {
+			block = blocks[i];
+			
+			for (var j=0, _j=block.length; j<_j; j++) {
+				mills = block[j];
+				value = summaryData.get(mills);
+				
+				date = new Date(mills);
+				
+				row[row.length] = [k++, ITAhM.util.toDateTimeString(date), value.max, value.avg, value.min].join(",");
+			}
+		}
+	}
+
+	return row;
+}
+
+/**
+ * private
+ */
+function buildDetailFile() {
+	var detailData = window.chartWindow.detailData,
+		chartDetail = window.chartWindow.chartDetail,
+		blocks, row, block, date, mills, value, k = 0;
+	
+	row = ["index,date,storage usage(bytes)"];
+	
+	if (chartDetail) {
+		blocks = chartDetail.keys;
+		
+		for (var i=0, _i=blocks.length; i<_i; i++) {
+			block = blocks[i];
+			
+			for (var j=0, _j=block.length; j<_j; j++) {
+				mills = block[j];
+				
+				date = new Date(mills);
+				
+				row[row.length] = [k++, ITAhM.util.toDateTimeString(date), detailData.get(mills)].join(",");
+			}
+		}
+	}
+	
+	return row;
+}
+
+function getFile() {
+	var rowArray;
+	
+	if (window.chartWindow.detailData) {
+		rowArray = buildDetailFile();
+	}
+	else {
+		rowArray = buildSummaryFile();
+	}
+	
+	ITAhM.util.download(new Blob([rowArray.join("\n")] ,{
+		type: "text/csv;charset=utf-8;"
+	}), "chart_storage.csv");
+}
+
+/**
+ * public
+ */
+(function(print) {
+	window.print = function() {
+		window.chartWindow.beforePrint();
+		
+		print();
+		
+		window.chartWindow.afterPrint();
+	};
+})(window.print);
+
+		</script>
+	</head>
+	
+	<body>
+		
+		<header>
+			<h1>스토리지</h1>
+			<h2>볼륨 : <span id="storage_name"></span></h2>
+			<div id="legend"></div>
+		</header>
+		
+		<iframe id="chart" src="chart_base.html" width="100%" height="100%"></iframe>
+		
+		<script src="js/ITAhM.js"></script>	
+		<script src="js/object.js"></script>
+		<script>
+
+var chart = document.getElementById("chart"),
+	chartWindow = chart.contentWindow,
+	resourceIndex = window.location.search.substring(1);
+
+		</script>
+	
+	</body>
+	
+</html>

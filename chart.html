@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<meta http-equiv="Cache-Control" content="No-Cache">
+		
+		<title>Chart @ ITAhM</title>
+		
+		<style>
+
+@import "css/itahm.css";
+@import "css/calendar.css";
+
+body {
+	position: fixed; top: 10px; right: 10px; bottom: 10px; left: 10px;
+	margin: 0; padding: 0;
+	display: flex;
+	flex-direction: column;
+}
+
+header {
+	position: absolute; top: 0; right: 0;
+	color: #fff; 
+}
+
+#chart {
+	border: none;
+	flex: 1;
+	margin: 3px 0;
+}
+
+nav {
+	float: right;
+}
+
+nav img {
+	vertical-align: middle;
+}
+
+circle {
+	fill: #777;
+}
+
+svg image:hover,
+body.move {
+	cursor: e-resize;
+}
+
+footer {
+	height: 40px;
+	position: relative;
+	margin: 0 16px;
+	background-color: rgba(99, 99, 99, .1);
+	color: #fff;
+	/*border: solid #999;
+	border-width: 1px 0;*/
+}
+
+footer >div {
+	position: absolute; top: 0; bottom: 0; left: 0; right: 0;
+}
+
+footer #grid {
+	width: 100%;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+footer .dot {
+	position: relative;
+}
+
+footer .dot::after {
+	content: "";
+	position: absolute; top: 0; left: 0;
+	transform: translateX(-50%) translateY(-50%);
+	border: 2px solid #ddd;
+	border-radius: 50%;
+}
+
+footer #selector {
+	overflow: hidden;
+}
+
+#top_text,
+#bottom_text {
+	text-anchor: start;
+}
+
+#area {
+	position: absolute;	top: 0; right: 0; bottom: 0; left: 0;
+	border : double #999;
+	border-width: 0 5px;
+	background-color: #777;
+}
+
+footer .label {
+	position: absolute;
+	white-space: nowrap;
+}
+
+#area span:first-child {
+	top: 0; right: 0;
+}
+
+#area span:last-child {
+	bottom: 0; left: 0;
+}
+
+#start {
+	bottom: 0; left: 5px;
+}
+
+#end {
+	right: 5px; top: 0;
+}
+
+footer span.label::after {
+	content: attr(title);
+}
+
+.dialog {
+	position: fixed; top:0; right: 0; bottom: 0; left: 0; 
+	display: flex; justify-content: center; align-items: center;
+	background-color: rgba(0, 0, 0, .6);
+}
+
+.dialog_1 {
+	padding: 20px;
+	background-color: #fff;
+	border: 3px solid #000;
+}
+
+.dialog_1_1 {
+	display: flex;
+	position: relative;
+}
+
+.dialog_1_1 span {
+	flex: 1;
+	padding: 1em;
+	font-weight: bold; font-size: 16px;
+}
+
+.dialog_1_1 span:hover {
+	cursor: pointer;
+	text-decoration: underline;
+}
+
+.dialog_2 {
+	position: absolute; top:0; right: 0; bottom: 0; left: 0; 
+	display: flex; justify-content: center; align-items: center;
+}
+
+.dialog_2_1 {
+	background-color: #fff;
+	padding: .5em;
+	border: 2px solid #0084ff;
+}
+
+.dialog_2_1_1 {
+	text-align: right;
+}
+
+.dialog_1 form {
+	display: flex;
+}
+
+.dialog_1 form input {
+	flex: 1;
+	padding: .5em;
+	border-radius: 1.2em;
+	background-color: #0084ff;
+	color: #fff;
+	border: .2em solid transparent;
+}
+
+.dialog_1 input:hover {
+	background-color: #fff;
+	color: #0084ff;
+	border-color: #0084ff;
+}
+
+.dialog:not(.picker) .dialog_2 {
+	display: none;
+}
+
+.layout {
+	display: none;
+}
+
+body:not(.set) .dialog {
+	display: none;
+}
+
+.label {
+	pointer-events: none;
+}
+
+		</style>
+		<script>
+		
+function resize() {
+	window.sRect = selector.getBoundingClientRect();
+	window.blockWidth =  window.sRect.width / (window.dayCount -1);
+	
+	resetArea();
+}
+
+function getDateText(mills) {
+	var date = new Date(mills),
+		dd = date.getDate();
+	
+	return MONTH[date.getMonth()] + (dd >9? "": "0") + dd +"일";
+}
+
+function initialize() {
+	var date = new Date(window.start);
+	
+	window.dateList = [];
+	window.dayCount = 0;
+	
+	for (; date <= window.end; date.setDate(date.getDate() +1)) {
+		window.grid.appendChild(window.dot.cloneNode(true));
+		
+		window.dateList[window.dayCount] = date.getTime();
+		
+		window.dayCount++;
+	}
+	
+	window.leftPos = window.dateList.indexOf(window.today);
+	window.rightPos = window.dateList.indexOf(window.end);
+	
+	window.startDate.title = getDateText(window.start);
+	window.endDate.title = getDateText(window.end);
+	
+	resize();
+}
+
+function onSelectStart(e) {
+	var target = e.detail.target;
+	
+	if (target != window.area) {
+		return;
+	}
+	
+	var rect = window.area.getBoundingClientRect();
+	
+	window.target = e.detail.target;
+	window.isDragging = true;
+	window.left = rect.left - window.sRect.left;
+	window.right = window.sRect.width - rect.width - window.left;
+}
+
+function onSelect(e) {
+	if (!window.isDragging) {
+		return;
+	}
+	
+	switch(window.move) {
+	case "left":
+		var x = window.left + e.detail.dragX;
+		
+		if (x < 0) {
+			return;
+		}
+		
+		onChange(x, window.right);
+		
+		break;
+		
+	case "right":
+		var x = window.right - e.detail.dragX;
+		
+		if (x < 0) {
+			return;
+		}
+		
+		onChange(window.left, x);
+		
+		break;
+	
+	case "area":
+		var x1 = window.left + e.detail.dragX,
+			x2 = window.right - e.detail.dragX;
+		
+		if (x1 < 0 || x2 < 0) {
+			return;
+		}
+		
+		onChange(x1, x2);
+		
+		break;
+	}
+}
+
+function onSelectEnd(e) {
+	window.isDragging = false;
+	window.target = undefined;
+}
+
+function onMove(e) {
+	if (window.isDragging) {
+		return;
+	}
+	
+	var rect = area.getBoundingClientRect(),
+		x = e.clientX - rect.left;
+	
+	if (x < MARGINS) {
+		window.move = "left";
+		window.area.style.cursor = 'ew-resize';
+	}
+	else if (rect.width - x < MARGINS) {
+		window.move = "right";
+		window.area.style.cursor = 'ew-resize';
+	}
+	else {
+		window.move = "area";
+		area.style.cursor = 'move';
+	}
+}
+
+function onChange(left, right) {
+	var leftPos = Math.round(left / window.blockWidth),
+		rightPos = Math.round((window.sRect.width - right) / window.blockWidth);
+	
+	if (isNaN(leftPos) || isNaN(rightPos)) {
+		throw "NaN";
+	}
+	
+	if (leftPos >= rightPos) {
+		return;
+	}
+	
+	if (window.leftPos == leftPos && window.rightPos == rightPos) {
+		return;
+	}
+	
+	window.leftPos = leftPos;
+	window.rightPos = rightPos;
+	
+	resetArea();
+	
+	window.chartWindow.draw(window.dateList[leftPos], window.dateList[rightPos]);
+}
+
+function resetArea() {
+	window.area.style.left = window.leftPos * blockWidth + "px";
+	window.area.style.right = (window.dayCount -1 - window.rightPos) * blockWidth + "px";
+	
+	window.areaStartDate.title = getDateText(window.dateList[window.leftPos]);
+	window.areaEndDate.title = getDateText(window.dateList[window.rightPos]);
+}
+
+function reload(start, end) {
+	var date = new Date(end);
+	
+	window.start = start;
+	window.end = end;
+	window.today = start;
+	
+	window.chartWindow.location.reload();
+	
+	while(window.grid.firstChild) {
+		window.grid.removeChild(window.grid.firstChild);
+	}
+	
+	window.leftPos = window.dayCount -2;
+	window.rightPos = 0;
+	
+	initialize();
+}
+
+		</script>
+	</head>
+	
+	<body>
+		
+		<header>
+			<nav>
+				<button id="set">
+					<img width="16" height="16" src="img/calendar.png">기간설정
+				</button>
+				<button id="realtime">
+					<img width="16" height="16" src="img/realtime.png"> 실시간 그래프
+				</button>
+				<button id="save" title="CSV 파일로 저장">
+					<img width="16" height="16" src="img/save.png"> 저장
+				</button>
+				<button id="print" title="인쇄">
+					<img width="16" height="16" src="img/printer16.png"> 인쇄
+				</button>
+				<!--a href="status.html">
+					<button>
+						<img width="16" height="16" src="img/close.png">닫기
+					</button>
+				</a-->
+			</nav>
+		</header>
+		
+		<iframe id="chart" width="100%" height="100%"></iframe>
+		
+		<footer>
+			<div id="grid"></div>
+			<div class="label">
+				<span class="label" id="start"></span>
+				<span class="label" id="end"></span>
+			</div>
+			<div id="selector">
+				<div id="area">
+					<span class="label"></span>
+					<span class="label"></span>
+				</div>
+			</div>
+		</footer>
+		
+		<div class="dialog">
+			<div class="dialog_1">
+				<div class="dialog_1_1">
+					<span id="set_start"></span>
+					<span id="set_end"></span>
+				</div>
+				<form class="dialog_1_2" autocomplete="off">
+					<input type="reset" value="cancel">
+					<input type="submit" value="apply">
+				</form>
+			</div>
+			<div class="dialog_2">
+				<div class="dialog_2_1">
+					<div class="dialog_2_1_1">
+						<img id="close" src="/img/close.png" title="닫기">
+					</div>
+					<div id="date"></div>
+				</div>
+			</div>
+		</div>
+		
+		<div class="layout">
+			<span class="dot"></span>
+		</div>
+		
+		<script src="js/ITAhM.js"></script>
+		<script src="js/Draggable.js"></script>
+		<script src="js/object.js"></script>
+		<script>
+
+var chart = document.getElementById("chart"),
+	chartWindow = chart.contentWindow,
+	deviceIP = top.ip,
+	node = top.snmp;
+
+var 
+	MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+	MONTH = ["01월", "02월", "03월", "04월", "05월", "06월", "07월", "08월", "09월", "10월", "11월", "12월"],
+	MARGINS = 5;
+
+var svg = document.querySelector("svg"),
+	base = document.getElementById("base"),
+	dot = document.querySelector(".dot"),
+	footer = document.querySelector("footer"),
+	area = document.querySelector(".area"),
+	grid = document.getElementById("grid"),
+	left, right, dayCount, blockWidth, sRect,
+	selector = document.getElementById("selector"),
+	area = document.getElementById("area"),
+	startDate = document.getElementById("start"),
+	endDate = document.getElementById("end"),
+	areaEndDate = document.querySelector("#area>:first-child"),
+	areaStartDate = document.querySelector("#area>:last-child");
+
+(function (date) {
+	date.setHours(0, 0, 0, 0);
+	
+	window.today = date.getTime();
+	window.start = date.setDate(date.getDate() -6);
+	window.end = date.setDate(date.getDate() +7);
+})(new Date());
+
+
+(function (search) {
+	window.resource = search[0].split("=")[1],
+	window.index =  search[1].split("=")[1];
+})(window.location.search.substring(1).split("&"));
+
+document.onselectstart = function (e) {
+	return false;
+};
+
+document.getElementById("save").onclick = function () {
+	window.chartWindow.getFile();
+};
+
+document.getElementById("print").onclick = function () {
+	window.chartWindow.print();
+};
+
+document.getElementById("realtime").onclick = function () {
+	if (!top.realtime[window.resource]) {
+		top.realtime[window.resource] = {};
+	}
+	
+	if (top.realtime[window.resource][window.index]) {
+		top.realtime[window.resource][window.index].focus();
+	}
+	else {
+		top.realtime[window.resource][window.index] = window.open("realtime.html?resource="+ window.resource +"&index="+ window.index, "_blank", "width=600, height=300, resizable=yes", false);
+	}
+};
+
+window.addEventListener("resize", function () {
+	if (window.resizeTimer) {
+		clearTimeout(window.resizeTimer);
+	}
+	
+	window.resizeTimer = setTimeout(resize, 300);
+});
+
+selector.addEventListener("mousemove", onMove);
+selector.addEventListener("dragon", onSelectStart);
+selector.addEventListener("drag", onSelect);
+selector.addEventListener("dragoff", onSelectEnd);
+
+window.chart.onload = function () {
+	window.chartWindow.initialize(window.start, window.end, window.today, window.end);
+};	
+
+new Draggable(window.selector);
+
+initialize();
+
+(function(window) {
+	var form = document.querySelector("form"),
+		start = document.getElementById("set_start"),
+		end = document.getElementById("set_end"),
+		date = new Date(),
+		picker, selectDate;
+		
+	
+	start.textContent = toDateString(date);
+		
+	date.setDate(date.getDate() +1);
+		
+	end.textContent = toDateString(date);
+	
+	form.addEventListener("submit", onApply);
+	form.addEventListener("reset", onCancel);
+	
+	start.onclick = onSelectDate;
+	end.onclick = onSelectDate;
+	
+	document.getElementById("set").onclick = function () {console.log("?");
+		document.body.classList.add("set");
+	};
+	
+	document.getElementById("close").onclick = function () {
+		document.querySelector(".dialog").classList.remove("picker");
+	}
+	
+	picker = new ITAhM.Calendar("date", function (date) {
+		selectDate(date);
+	});
+	
+	/**
+	 * callback method
+	 */
+	 function onApply(e) {
+		e.preventDefault();
+		
+		var from = new Date(start.textContent).setHours(0, 0, 0, 0),
+			to = new Date(end.textContent).setHours(0, 0, 0, 0);
+		
+		if (from === to) {
+			return alert("서로 다른 날짜를 선택하세요.");
+		}
+	
+		if (from > to) {
+			var tmp = start.textContent;
+			
+			start.textContent = end.textContent;
+			end.textContent = tmp;
+			
+			reload(to, from);
+		}
+		else {
+			reload(from, to);
+		}
+		
+		closeDialog();
+	}
+	
+	function onCancel(e) {
+		closeDialog();
+	}
+	
+	function closeDialog() {
+		document.body.classList.remove("set");
+	}
+	
+	function toDateString(date) {
+		var mm = date.getMonth() +1,
+			dd = date.getDate();
+		
+		return date.getFullYear() +"-"+ (mm > 9? mm: "0"+ mm) +"-"+ (dd > 9? dd: "0"+ dd);
+	}
+
+	function onSelectDate() {
+		picker.move(new Date(this.textContent), true);
+		
+		selectDate = function (id, date) {
+			document.getElementById(id).textContent = toDateString(date);
+			
+			document.querySelector(".dialog").classList.remove("picker");
+		}.bind(window, this.id);
+		
+		document.querySelector(".dialog").classList.add("picker");
+	}
+	
+})({});
+
+window.chart.src = "chart_"+ resource +".html?"+ window.index;
+
+		</script>
+	
+	</body>
+	
+</html>

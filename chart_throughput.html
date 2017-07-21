@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<meta http-equiv="Cache-Control" content="No-Cache">
+		
+		<title>ITAhM</title>
+		
+		<style>
+		
+@import "css/itahm.css";
+
+body {
+	position: fixed; top: 0; right: 0; bottom: 0; left: 0;
+	margin: 0; padding: 0;
+	display: flex;
+	flex-direction: column;
+	color: #fff;
+}
+
+@media print {
+	body {
+		color: #000;
+	}
+	
+	#edit {
+		display: none;
+	}
+}
+
+#chart {
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+}
+
+body.row #chart {
+	flex-direction: row;
+}
+
+.chart {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+}
+
+iframe {
+	flex: 1;
+	border: none;
+	width: 100%; height: 100%;
+}
+
+nav {
+	text-align: right;
+}
+
+header {
+	position: relative;
+}
+
+h1 {
+	color: #fff;
+	margin: 0;
+}
+
+h2 {
+	position: absolute; top: 0; left: 0; right: 0;
+	text-align: center;
+}
+
+.legend {
+	text-align: right;
+	position: relative;
+}
+
+#legend::before {
+	content: "bandwidth: ";
+}
+
+#if_name {
+	margin: 0;
+}
+
+h3 {
+	margin: 0;
+	padding: 0 20px;
+}
+
+h3.input {
+	color: #7d7;
+}
+
+h3.output {
+	color: #f60;
+}
+
+form {
+	padding: 1em;
+	background-color: #f0f0f0;
+	position: absolute; top: 0; right: 0;
+}
+
+#speed {
+	width: 100px;
+	box-sizing: border-box;
+}
+
+form {
+	text-align: initial;
+}
+
+form h3,
+form label {
+	color: #000;
+}
+
+form .arrow {
+	padding: 1em;
+}
+
+form .arrow::after {
+	content: "";
+	display: inline-block;
+	border: 1em solid transparent;
+	border-top-color: #0084ff;
+}
+
+form>div:nth-child(1) {
+	text-align: center;
+	background-color: #fff;
+	padding: .5em;
+}
+
+form input,
+form select {
+	padding: .5em;
+}
+	
+form>div:last-child {
+	display: flex;
+	margin-top: 1em;
+}
+
+form>div:last-child input {
+	flex: 1;
+	border-radius: 1.2em;
+	background-color: #0084ff;
+	color: #fff;
+	border: .2em solid transparent;
+}
+
+form>div:last-child input:hover {
+	background-color: #fff;
+	color: #0084ff;
+	border-color: #0084ff;
+}
+
+body:not(.customized) form>div:nth-child(2),
+body:not(.dialog) form {
+	display: none;
+}
+
+@media print {
+	nav {
+		display: none;
+	}
+}
+
+		</style>
+		<script>
+		
+function initialize(from, to, start, end) {
+	var entry = top.snmp.ifEntry[window.index],
+		request = {
+			command: "query",
+			ip: top.ip,
+			summary: true,
+			index: window.index,
+			start: from,
+			end: to
+		};
+	
+	window.max = entry.ifSpeed;
+	
+	if (!top.device.ifSpeed) {
+		top.device.ifSpeed = {};
+	}
+	else if (window.index in top.device.ifSpeed) {
+		window.max = top.device.ifSpeed[window.index];
+		
+		document.body.classList.add("customized");
+	}
+	
+	document.getElementById("before").textContent = ITAhM.util.toBPSString(window.max);
+	
+	window.start = start;
+	window.end = end;
+	
+	testDetail();
+	
+	document.getElementById("if_name").textContent = entry.ifName;
+	
+	request.database = "ifInOctets";
+	top.sendRequest(request, onSummaryInResponse);
+	
+	request.database = "ifOutOctets";
+	top.sendRequest(request, onSummaryOutResponse);
+	
+	document.getElementById("legend").textContent = ITAhM.util.toBPSString(window.max);
+}
+
+function onSummaryInResponse(data) {
+	window.chartInWindow.initialize(new ITAhM.ChartSummaryData(data), window.max, "#7d7", onValueToString);
+	
+	drawIn();
+}
+
+function onSummaryOutResponse(data) {
+	window.chartOutWindow.initialize(new ITAhM.ChartSummaryData(data), window.max, "#f60", onValueToString);
+	
+	drawOut();
+}
+
+function onValueToString(value) {
+	return ITAhM.util.toBPSString(value);
+}
+
+/**
+ * private
+ */
+function sendDetailRequest(database, callback) {
+	var request = {
+			command: "query",
+			ip: top.ip,
+			summary: false,
+			index: window.index,
+			start: window.start,
+			end: window.end
+		};
+	
+	request.database = database;
+	
+	top.sendRequest(request, callback);
+}
+
+/**
+ * private
+ */
+function onDetailInResponse(data) {
+	window.chartInWindow.detail(new ITAhM.ChartData(data));
+}
+
+/**
+ * private
+ */
+function onDetailOutResponse(data) {
+	window.chartOutWindow.detail(new ITAhM.ChartData(data));
+}
+
+/**
+ * private
+ */
+function drawIn() {
+	if (window.chartInWindow.draw(window.start, window.end) && window.detail) {
+		sendDetailRequest("ifInOctets", onDetailInResponse);
+	}
+}
+
+/**
+ * private
+ */
+function drawOut() {
+	if (window.chartOutWindow.draw(window.start, window.end) && window.detail) {
+		sendDetailRequest("ifOutOctets", onDetailOutResponse);
+	}
+}
+
+function testDetail() {
+	var date = new Date(window.start);
+	
+	window.detail = date.setDate(date.getDate() +1) === window.end;
+}
+
+/**
+ * public
+ */
+function draw(start, end) {
+	window.start = start;
+	window.end = end;
+	
+	testDetail();
+	
+	drawIn();
+	drawOut();
+}
+
+/**
+ * public
+ */
+function getFile() {
+	(window.chartInWindow.detailData? buildDetailFile: buildSummaryFile)(window.chartInWindow, "chart_throughput_in.csv");
+	
+	(window.chartOutWindow.detailData? buildDetailFile: buildSummaryFile)(window.chartOutWindow, "chart_throughput_out.csv");
+}
+
+function buildDetailFile(chartWindow, fileName) {
+	var detailData = chartWindow.detailData,
+		chartDetail = chartWindow.chartDetail,
+		row = ["index,date,interface throughput(bps)"],
+		blocks, block, date, mills, value, k = 0;
+	
+	if (detailData) {
+		blocks = chartDetail.keys;
+		
+		for (var i=0, _i=blocks.length; i<_i; i++) {
+			block = blocks[i];
+			
+			for (var j=0, _j=block.length; j<_j; j++) {
+				mills = block[j];
+				
+				date = new Date(mills);
+				
+				row[row.length] = [k++, ITAhM.util.toDateTimeString(date), detailData.get(mills)].join(",");
+			}
+		}
+	}
+	
+	ITAhM.util.download(new Blob([row.join("\n")] ,{
+		type: "text/csv;charset=utf-8;"
+	}), fileName);
+}
+
+function buildSummaryFile(chartWindow, fileName) {
+	var summaryData = chartWindow.summaryData,
+		chartSummary = chartWindow.chartSummary,
+		row = ["index,date,max,avg,min"], 
+		blocks, block, date, mills, value, k = 0;
+	
+	if (chartSummary) {
+		blocks = chartSummary.keys;
+		
+		for (var i=0, _i=blocks.length; i<_i; i++) {
+			block = blocks[i];
+			
+			for (var j=0, _j=block.length; j<_j; j++) {
+				mills = block[j];
+				value = summaryData.get(mills);
+				
+				date = new Date(mills);
+				
+				row[row.length] = [k++, ITAhM.util.toDateTimeString(date), value.max, value.avg, value.min].join(",");
+			}
+		}
+	}
+	
+	ITAhM.util.download(new Blob([row.join("\n")] ,{
+		type: "text/csv;charset=utf-8;"
+	}), fileName);
+}
+
+function put() {
+	top.sendRequest({
+		command: "put",
+		database: "device",
+		key: top.ip,
+		value: top.device
+	}, function (data) {
+		top.databases.device = data;
+		
+		window.location.reload();
+	});
+}
+
+/**
+ * public
+ */
+(function(print) {
+	window.print = function() {
+		window.chartInWindow.beforePrint();
+		window.chartOutWindow.beforePrint();
+		
+		print();
+		
+		window.chartInWindow.afterPrint();
+		window.chartOutWindow.afterPrint();
+	};
+})(window.print);
+
+		</script>
+	</head>
+	
+	<body>
+		<header>
+			<h1>통신</h1>
+			<h2>인터페이스 : <span id="if_name"></span></h2>
+			<div class="legend">
+				<span id="legend"></span>
+				<button id="edit">수정</button>
+				<form>
+					<div>
+						<h3 id="before">변경전</h3>
+						<div class="arrow"></div>
+						<div>
+							<input type="number" min="1" id="speed" required>
+							<select id="unit">
+								<option value="1">bps
+								<option value="1000">Kbps
+								<option value="1000000" selected>Mbps
+								<option value="1000000000">Gbps
+							</select>
+						</div>
+					</div>
+					<div>
+						<label><input type="checkbox" id="reset">초기화</label>
+					</div>
+					<div>
+						<input type="reset" value="취소">
+						<input type="submit" value="적용">
+					</div>
+				</form>
+			</div>
+		</header>
+		
+		<nav>
+			<select id="view">
+				<option value="add">가로 보기
+				<option value="remove" selected>세로 보기
+			</select>
+		</nav>
+		<div id="chart">
+			<div class="chart">
+				<h3 class="input">Input</h3>
+				<iframe id="chart_in" src="chart_base.html"></iframe>
+			</div>
+			<div class="chart">
+				<h3 class="output">Output</h3>
+				<iframe id="chart_out" src="chart_base.html"></iframe>
+			</div>
+		</div>
+		
+		<script src="js/ITAhM.js"></script>	
+		<script src="js/object.js"></script>
+		<script>
+
+var chartIn = document.getElementById("chart_in"),
+	chartInWindow = chartIn.contentWindow,
+	chartOut = document.getElementById("chart_out"),
+	chartOutWindow = chartOut.contentWindow,
+	index = window.location.search.substring(1),
+	form = document.querySelector("form"),
+	detail;
+
+form.onsubmit = function (e) {
+	e.preventDefault();
+	
+	top.device.ifSpeed[window.index] = document.getElementById("speed").value * document.getElementById("unit").value;
+	
+	put();
+};
+
+form.onreset = function () {
+	document.body.classList.remove("dialog");
+};
+
+document.getElementById("reset").onclick = function (e) {
+	e.preventDefault();
+	
+	if (!confirm("bandwidth 설정을 초기화 하겠습니까?")) {
+		return;
+	}
+	
+	delete top.device.ifSpeed[window.index];
+	
+	put();
+};
+
+document.getElementById("view").onchange = function () {
+	document.body.classList[this.value]("row");
+}
+
+document.getElementById("edit").onclick = function () {
+	document.body.classList.add("dialog");
+	
+	document.getElementById("speed").focus();
+}
+
+		</script>
+	
+	</body>
+	
+</html>

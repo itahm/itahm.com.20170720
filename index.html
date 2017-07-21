@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<meta http-equiv="Cache-Control" content="No-Cache">
+
+	<title>ITAhM</title>
+	<style>
+
+body {
+	font-family: arial, tahoma, "맑은 고딕";
+}
+
+
+nav {
+	height: 80px;
+}
+
+.logo {
+	width: 1024px;
+	margin: auto;
+}
+
+.logo {
+	font-size: 42px;
+	font-weight: 900;
+}
+
+.title {
+	position: relative;
+	background: url("img/home/title.gif") no-repeat center;
+	background-size: 2048px;
+	color: #fff;
+}
+
+.title_1 {
+	background-color: rgba(0, 0, 0, .85);	
+	color: #fff;
+	display: flex; justify-content: center;
+}
+
+.title_1_1 {
+	padding: 2em;
+	width: 400px;
+}
+
+.title_1_2 {
+	padding: 2em;
+}
+
+.title_1_2 h2 {
+	width: 200px;
+	padding: 1em;
+	border: 3px solid #fff;
+	box-sizing: border-box;
+	text-align: center;
+}
+
+.title_1_2 h2:hover {
+	color: #0084ff;
+	background-color: #fff;
+	cursor: pointer;
+}
+
+.target {
+	display: flex;
+	justify-content: center;
+	flex-wrap: wrap;
+}
+
+.target img {
+	margin: 1em;
+}
+
+.board {
+	text-align: center;
+}
+
+.board ul {
+	display: inline-block;
+}
+
+.intro {
+	display: flex;
+	justify-content: center;
+}
+
+.intro h1 {
+	font-size: 48px;
+}
+
+.intro> div {
+	max-width: 600px;
+}
+
+.intro p::before {
+	content: "";
+	display: inline-block;
+	border: 0.5em solid #999;
+	margin: 0 0.2em;
+}
+
+img[src="img/home/enterprise2.png"] {
+	float: right;
+	margin: 0 0 1em 1em;
+}
+
+img[src="img/home/enterprise1.png"] {
+	float: left;
+	margin: 0 1em 1em 0;
+}
+
+img[src="img/home/quality.png"] {
+	float: right;
+	margin: 0 0 1em 1em;
+}
+
+img[src="img/home/money.png"] {
+	float: left;
+	margin: 0 1em 1em 0;
+}
+
+img[src="img/home/performance.png"] {
+	float: right;
+	margin: 0 0 1em 1em;
+}
+
+img[src="img/home/capability.png"] {
+	float: left;
+	margin: 0 1em 1em 0;
+}
+
+img[src="img/home/preview.png"] {
+	display: block;
+	margin: auto;
+}
+
+.reference {
+	margin: 3em auto;
+	display: flex;
+	justify-content: center;
+}
+
+.reference img {
+	margin: 1em;
+}
+
+.preview {
+	text-align: center;
+}
+
+.preview img:not(:first-child) {
+	display: none;
+}
+
+.preview img {
+	animation: slide 5s;
+}
+
+footer {
+	display: flex;
+	justify-content: center;
+}
+
+footer img {
+	width: 1em; height: 1em;
+}
+
+@keyframes slide {
+	0% {
+		opacity: 0;
+	}
+	40% {
+		opacity: 1;
+	}
+	100% {
+		opacity: 1;
+	}
+}
+
+	</style>
+</head>
+<body>
+
+	<nav>
+		<div class="logo">
+			<img src="img/favicon.png" width="32" height="32">
+			<strong>ITAhM</strong>
+		</div>
+	</nav>
+	
+	<div class="title">
+		<div class="title_1">
+			<div class="title_1_1">
+				<h1>경량 NMS의 강자</h1>
+				<h1>아이탐 (ITAhM)</h1>
+				<p>
+					아이탐(ITAhM)은 유무선 통신장비를 비롯하여 서버, 데이터베이스, 스토리지와 같은 정보시스템 설비들의 성능을
+					실시간으로 모니터링 하고 수집하여 그 이력을 관리하여주는
+					NMS/SMS (Network/Server Management System) 통합 솔루션입니다.
+					독자기술로 직접 제작한 HTTP 서버와 데이터베이스를 사용하여 저비용으로 높은 성능을 구현하였습니다.
+					부담 없는 비용으로 장애를 예방하고 24시간 365일 가용한 서비스를 제공할 수 있도록 아이탐이 도와드리겠습니다.
+				</p>
+			</div>
+			<div class="title_1_2">
+				<h2 id="demo">Demo</h2>
+				<h2 id="connect">Connect</h2>
+			</div>
+		</div>
+	</div>
+	
+	<div class="target">
+		<img src="img/home/enterprise.gif">
+		<img src="img/home/finance.gif">
+		<img src="img/home/public.gif">
+		<img src="img/home/school.gif">
+		<img src="img/home/infra.gif">
+	</div>
+	
+	<div class="board">
+		<ul>
+			<li><h3><a href="overview.html">Overview</a></h3>
+			<li><h3><a href="manual.html">Manual</a></h3>
+			<li><h3><a href="img/home/brochure.pdf">Brochure</a></h3>
+		</ul>
+	</div>
+	
+	<div class="where intro">
+		<div>
+			<h1>Where?</h1>
+			<img src="img/home/enterprise2.png" width="64" height="64">
+			<p>NMS 솔루션의 필요성은 이미 알고 있지만 고가의 서비스 비용을
+				집행할 만큼 예산이 충분하지 않은 중소기업의 관리자들은
+				더 이상 고민하지 않으셔도 좋습니다.
+				아이탐은 그 고민을 해결하기 위해서 시작되었습니다.</p>
+			<img src="img/home/enterprise1.png" width="64" height="64">
+			<p>엔터프라이즈급 NMS 솔루션을 사용하고 있더라도
+				지점의 워크그룹스위치와 같은 사소한 모든 장비를 관리하려면
+				그 비용 역시 감당하기 어려워 부득이 관리 대상에서 제외되는 장비들이 있습니다.
+				이러한 경우 아이탐을 기존 NMS 솔루션의 보조적인 역할로써 활용할 수 있습니다 </p>
+		</div>
+	</div>
+	
+	<div class="why intro">
+		<div>
+			<h1>Why?</h1>
+			<img src="img/home/quality.png" width="64" height="64">
+			<p>회사가 제공하는 서비스의 품질 저하를 야기할 수 있는 장애 인자들을 미리 인지함으로써
+				 서비스의 가용성을 극대화 하고 장애 발생시에도 신속하게 대응하여 복구함으로써
+				 비즈니스 연속성을 향상 시킬 수 있습니다.</p>
+			<img src="img/home/money.png" width="64" height="64">
+			<p>아이탐은 상용 웹서버, 미들웨어, 데이터베이스 등을 사용하지 않고 독자적인 기술로 개발되어
+				별도의 라이센스 비용이 추가되지 않습니다.
+				이와 같이 독자적인 기술로 개발된 서비스들은 솔루션에 최적화 되어 있기 때문에
+				하드웨어 구매 비용을 절감할 수 있습니다.
+				비용 때문에 서비스의 품질을 고민하는 일은 없어야 합니다.</p>
+			
+			<img src="img/home/performance.png" width="64" height="64">
+			<p>
+				고가의 전산자원이 낭비되고 있지는 않습니까?
+				아이탐으로 각 자원들의 성능을 모니터링하고 분석하여
+				남거나 모자른 자원들을 서로 함께 사용하도록
+				정보시스템을 다시 디자인할 수 있습니다. 
+				
+			</p>
+			<img src="img/home/capability.png" width="64" height="64">
+			<p>아이탐은 인텔 i5 프로세서, 4G 메모리, 5400RPM HDD 만으로
+				<strong>500노드</strong>
+				이상의 서버와 통신장비를 거뜬히 모니터링할 수 있습니다. 이는 구매한지 오래된
+				개인용 데스크탑 수준의 하드웨어 입니다.
+				아이탐이 제공하는 구성도는 위와 같은 수준의 컴퓨터로 지연현상 없이
+				<strong>3000노드</strong>
+				이상의 장치들을 표현하고 관리할 수 있습니다.</p>
+		</div>
+	</div>
+	
+	<div class="reference">
+		<img src="/img/home/teratower.logo.jpg" height="50">
+		<img src="/img/home/aths.logo.png" height="50">
+		<img src="/img/home/whec.logo.gif" height="50">
+		<img src="/img/home/thirautech.logo.png" height="50">
+		<img src="/img/home/kier.logo2.png" height="50">
+	</div>
+	
+	<div class="preview">
+		<img src="img/home/dashboard.png" height="500">
+		<img src="img/home/status.png" height="500">
+		<img src="img/home/chart.png" height="500">
+		<img src="img/home/map.png" height="500">
+		<img src="img/home/map_zoom.png" height="500">
+	</div>
+	
+	<footer>
+		<p>
+			<img src="img/favicon.png">
+			서울툭별시 성북구 동소문로 63, 6층 10호 010-2538-6433 itahm2014@gmail.com
+		</p>
+	</footer>
+	
+	<script>
+	
+document.getElementById("demo").onclick = function () {
+	window.location.href = "demo.html";
+};
+
+document.getElementById("connect").onclick = function () {
+	window.location.href = "connect.html";
+};
+
+(function (preview) {
+	window.setInterval(function () {
+		preview.appendChild(preview.firstElementChild);
+	}, 5000);
+})(document.querySelector(".preview"));
+	
+	</script>
+</body>
+</html>

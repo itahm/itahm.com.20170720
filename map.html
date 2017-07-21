@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<meta http-equiv="Cache-Control" content="No-Cache">
+		
+		<title></title>
+		
+		<style>
+@import "css/itahm.css";
+
+body {
+	position: fixed; top: 0; right: 0; bottom: 0; left: 0;
+	margin: 0; padding: 0;
+}
+
+.bg_loading {
+	background-color: #4d525a;
+}
+
+iframe {
+	border: none;
+	width: 100%; height: 100%;
+}
+
+nav {
+	position: absolute; top: 5px;
+}
+
+nav.right {
+	right: 5px;
+}
+
+nav.left {
+	left: 5px;
+}
+
+nav input,
+nav img {
+	vertical-align: middle;
+}
+
+nav img {
+	cursor: pointer;
+}
+
+nav {
+	font-size: 9pt;
+	color: #fff;
+}
+
+button img {
+	vertical-align: bottom;
+	margin-right: 0.5em;
+}
+
+body:not(.root) .root {
+	display: none;
+}
+
+#group {
+	display: none;
+}
+
+		</style>
+		
+		<script>
+
+function resize() {
+	window.mapWindow.resize();
+}
+
+function editDevice(key) {
+	top.showDialog.call(window, key && top.databases.device[key].group? "group_dialog.html": "device_dialog.html", key);
+}
+
+function editGroup(name) {
+	top.showDialog.call(window, "group_dialog.html", name);
+}
+
+function onSave() {
+	var request = {
+			command: "push",
+			database: "position",
+			data: window.top.databases.position
+		};
+	
+	top.sendRequest(request, function (response) {
+		alert("구성의 변경사항을 저장하였습니다.");
+	});
+}
+
+function onEvent(ip) {
+	if (top.databases.device[ip]) {
+		window.mapWindow.resetDevice(ip, true);
+	}
+}		
+
+function onSetAlarm(ip){
+	top.showDialog.call(window, "critical_dialog.html", ip);
+}
+
+function test() {
+	var device, entry, i=1000;
+	
+	for (var ip in top.databases.device) {
+		device = top.databases.device[ip];
+		
+		if (device.name) continue;
+		
+		if (i-- < 0) break;
+		
+		for (var peer in device.ifEntry) {
+			delete top.databases.device[peer].ifEntry[ip];
+		}
+		
+		delete top.databases.device[ip];
+		delete top.databases.position[ip];
+	}
+	
+	var request = {
+			command: "push",
+			database: "position",
+			data: window.top.databases.position
+		};
+	
+	top.sendRequest(request, function (response) {
+		alert("구성의 변경사항을 저장하였습니다.");
+	});
+	
+	request.database = "device";
+	request.data = top.databases.device;
+	
+	top.sendRequest(request, function (response) {
+		alert("장비의 변경사항을 저장하였습니다.");
+	});
+}
+
+		</script>
+		
+		
+	</head>
+	
+	<body class="loading">
+		
+		<iframe id="map" src="map_base.html"></iframe>
+		
+		<nav class="left">
+			<button id="add"><img src="img/add_device.png" width="16px" height="16px" title="장비 추가" class="root">추가</button>
+			<button id="group"><!--img src="img/add_group.png" width="16px" height="16px" title="그룹 추가" class="root"-->그룹</button>
+			<button id="save"><img src="img/save.png" width="16px" height="16px" title="저장" class="root">저장</button>
+			<button id="zoom_in"><img src="img/zoomin.png" width="16px" height="16px" title="확대">확대</button>
+			<button id="zoom_out"><img src="img/zoomout.png" width="16px" height="16px" title="축소">축소</button>
+			<button id="print"><img src="img/printer16.png" width="16px" height="16px" title="인쇄">인쇄</button>
+			<!--button onclick="test()">test</button-->
+		</nav>
+		
+		<nav class="right">	
+			<label title="인터페이스명 표시/감추기"><input type="checkbox" id="ifname" checked>interface</label>
+		</nav>
+				
+		<div class="bg_loading"></div>
+		
+		<script>
+
+var map = document.getElementById("map");
+
+if (sessionStorage.level == 0) {
+	document.body.classList.add("root");
+}
+
+document.getElementById("save").onclick = onSave;
+
+document.getElementById("add").onclick = function () {
+	editDevice();
+};
+
+document.getElementById("group").onclick = function () {
+	editGroup();
+};
+
+window.map.onload = function () {
+	var mapWindow = window.map.contentWindow,
+		scale, ip;
+	
+	window.mapWindow = mapWindow;
+	
+	window.addEventListener("resize", function () {
+		clearTimeout(window.schedule);
+		
+		window.schedule = setTimeout(resize, 500);
+	});
+	
+	document.getElementById("zoom_in").onclick = function () {
+		mapWindow.zoom(scale *= 1.1);
+		
+		window.top.databases.local.scale = scale;
+	}
+
+	document.getElementById("zoom_out").onclick = function () {
+		mapWindow.zoom(scale /= 1.1);
+		
+		window.top.databases.local.scale = scale;
+	}
+
+	document.getElementById("print").onclick = function () {
+		mapWindow.print();
+	}
+	
+	document.getElementById("ifname").onchange = function () {
+		mapWindow.displayIFName(this.checked);
+	};
+	
+	mapWindow.addEventListener("wheel", function (e) {
+		mapWindow.zoom(e.deltaY < 0? scale *= 1.1: scale /= 1.1);
+		
+		window.top.databases.local.scale = scale;
+	});
+	
+	mapWindow.onEditDevice = editDevice;
+	
+	mapWindow.onShowChart = function (ip){
+		top.showChart(ip);
+	}
+	
+	mapWindow.onShowAlarm = onSetAlarm;
+	
+	mapWindow.zoom(scale = window.top.databases.local.scale);
+	
+	mapWindow.initialize();
+	
+	document.body.classList.remove("loading");
+}
+
+		</script>
+	
+	</body>
+	
+</html>

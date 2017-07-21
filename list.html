@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		
+		<title>List @ ITAhM</title>
+		
+		<style>
+@import "css/itahm.css";
+
+body {
+	position: fixed; top: 0; right: 0; bottom: 0; left: 0;
+	margin: 0; padding: 0;
+}
+
+article {
+	display: flex;
+	flex-direction: column;
+	margin: auto;
+	height: 99%;
+}
+
+aside {
+	margin: 5px 0;
+	display: flex;
+	justify-content: space-between;
+}
+
+#list {
+	flex: 1;
+	background-color: #fff;
+	overflow-y: scroll;
+}
+
+header {
+	margin: 5px 0;
+	background-color: #0084ff;
+	color: #fff;
+	font-weight: bold;
+	text-align: center;
+	box-shadow: 0 0 5px #fff inset;
+}
+
+header img {
+	width: 24px;
+	height: 24px;
+}
+
+header ul::after {
+	content: "";
+	display: inline-block;
+	width: 16px;
+}
+
+header li {
+	text-align: center;
+}
+
+header li:nth-child(1) {
+	position: relative;
+}
+
+header li:nth-child(1),
+header li:nth-child(2),
+header li:nth-child(3),
+header li:nth-child(4) {
+	border-right-color: #ddd;
+}
+
+aside input,
+aside select {
+	padding: .5em;
+}
+
+form input[type="text"] {
+	flex: 1;
+	min-width: 0;
+}
+
+nav {
+	display: flex;
+	align-items: center;
+}
+nav> div {
+	margin-right: 5px;
+}
+
+ul {
+	margin: 0; padding: 0;
+	list-style: none;
+	display: flex;
+}
+
+li {
+	flex: 1;
+	display: flex; align-items: center;
+	padding: 5px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	border: 1px solid transparent;
+}
+
+li:nth-child(1) {
+	flex: none;
+	width: 3em;
+	text-align: center;
+}
+
+label {
+	color: #fff;
+}
+
+#list ul {
+	border-bottom: 1px solid #ddd;
+}
+
+#list ul:hover li:nth-child(5),
+#list ul:hover li:nth-child(6),
+#list ul:hover li:nth-child(7),
+#list ul:hover li:nth-child(8) {
+	background-color: rgba(0, 0, 0, .9);
+}
+
+li:nth-child(1)> img {
+	width: 24px;
+	height: 24px;
+	vertical-align: middle;
+}
+
+li:nth-child(5),
+li:nth-child(6),
+li:nth-child(7),
+li:nth-child(8) {
+	flex: none;
+	width: 3em;
+	background-size: 16px;
+	background-repeat: no-repeat;
+	background-position: center;
+}
+
+#list ul[data-disabled] {
+	color: #999;
+}
+
+#list ul:hover li:nth-child(5) {
+	background-image: url("img/location.png");
+	
+}
+
+#list ul:hover li:nth-child(6) {
+	background-image: url("img/edit.png");
+	cursor: pointer;
+}
+
+#list ul[data-snmp]:hover li:nth-child(7) {
+	background-image: url("img/alarm_gray.png");
+	cursor: pointer;
+}
+
+#list ul[data-alarm]:hover li:nth-child(7) {
+	background-image: url("img/alarm.png");
+	cursor: pointer;
+}
+
+#list ul[data-snmp]:hover li:nth-child(8) {
+	background-image: url("img/chart.png");
+	cursor: pointer;
+}
+
+#list ul:nth-child(odd) {
+	/*background-color: #fafafa;*/
+}
+
+#list li:nth-child(3) {
+	background-size: 24px 24px;
+	background-repeat: no-repeat;
+	background-position: left center;
+}
+
+#list li:nth-child(3)::before {
+	content: attr(data-type);
+	display: inline-block;
+	margin-left: 30px;
+}
+
+#count {
+	border: 2px ridge #fff;
+	width: 100px; height: 100%;
+	position: relative;
+	color: #fff;
+	font-size: 18px; font-weight: bold;
+}
+
+#count::after {
+	content: attr(data-value);
+	position: absolute; top: 50%; left: 50%;
+	transform: translateX(-50%) translateY(-50%);
+}
+
+.selector {
+	overflow: visible;
+}
+
+.selector div {
+	position: absolute; top: 100%; left: 0; width: 100%;
+	border: 1px inset gray;
+	box-sizing: border-box;
+	z-index: 1;
+	background-color: #fff;
+}
+
+.selector:not(:focus) div {
+	display: none;
+}
+
+.selector p {
+	padding: 3px; margin: 0;
+	text-align: center;
+}
+
+.selector p:not(:last-child) {
+	border-bottom: 1px solid #ccc;
+}
+
+.selector img {
+	pointer-events: none;
+}
+
+@keyframes grow {
+	from {
+		transform: scale(1);
+	}
+	to {
+		transform: scale(1.5);
+	}
+}
+
+body.normal #list>ul:not([data-normal]),
+body.critical #list>ul:not([data-critical]),
+body.shutdown #list>ul:not([data-shutdown]),
+body.disabled #list>ul:not([data-disabled]),
+body.unlabeled #list>ul:not([data-unlabeled]) {
+	display: none;
+}
+
+		</style>
+		
+		<script>
+
+function onEdit(ip) {
+	top.showDialog.call(window, "device_dialog.html", ip);
+}
+
+function onSetAlarm(ip){
+	top.showDialog.call(window, "critical_dialog.html", ip);
+}
+
+function onMap(ip) {
+	var device = top.databases.device[ip];
+	
+	top.databases.local.parent = device.parent;
+	top.databases.local.selected = ip;
+	
+	window.location.href = "map.html";
+}
+
+function initList() {
+	var df = document.createDocumentFragment(),
+		monitorData = top.databases.monitor;
+		criticalData = top.databases.critical;
+	
+	var deviceData = window.top.databases.device;
+	
+	for (var ip in deviceData) {
+		df.appendChild(createRow(deviceData[ip], monitorData[ip], criticalData[ip]));
+	}
+	
+	document.getElementById("count").dataset.value = df.children.length;
+	
+	list.appendChild(df);
+	
+	document.body.classList.remove("loading");
+}
+
+function createRow(device, monitor, set) {
+	var row = document.createElement("ul"),
+		icon, type, location, alarm, edit, status, labels, label;
+	
+	icon = row.appendChild(document.createElement("li")).appendChild(document.createElement("img"));
+	row.appendChild(document.createElement("li")).textContent = device.name;
+	
+	type = document.createElement("li");
+	type.dataset.type = device.type;
+	type.style.backgroundImage = "url('"+ getIcon(device.type).src +"')";
+	row.appendChild(type);
+	
+	row.appendChild(document.createElement("li")).textContent = device.ip;
+	
+	location = row.appendChild(document.createElement("li"));
+	edit = row.appendChild(document.createElement("li"));
+	alarm = row.appendChild(document.createElement("li"));
+	status = row.appendChild(document.createElement("li"));
+	
+	location.title = "구성도에서 장비 보기";
+	edit.title = "장비의 정보 편집";
+	
+	location.onclick = onMap.bind(undefined, device.ip);
+	edit.onclick = onEdit.bind(undefined, device.ip);
+	
+	window.deviceMapping[device.ip] = row;
+	
+	if (device.label) {
+		labels = device.label.split(",");
+		
+		for (var i=0, length=labels.length; i<length; i++) {
+			label = labels[i];
+			
+			row.classList.add(label);
+			
+			window.labelData[label] = null;
+		}
+	}
+	else {
+		row.dataset.unlabeled = true;
+	}
+	
+	if (monitor) {
+		if (monitor.protocol === "snmp") {
+			row.dataset.snmp = true;
+			
+			alarm.title = "장비의 성능 임계 설정";
+			alarm.onclick = onSetAlarm.bind(undefined, device.ip);
+			
+			status.title = "장비의 상태 보기";
+			status.onclick = top.showChart.bind(undefined, device.ip);
+			
+			if (set) {
+				row.dataset.alarm = true;
+			}
+		}
+			
+		if (monitor.shutdown) {
+			row.dataset.shutdown = true;
+			
+			icon.src = "img/warning.png";
+		}
+		else if (monitor.critical) {
+			row.dataset.critical = true;
+			
+			icon.src = "img/siren.png";
+		}
+		else {
+			row.dataset.normal = true;
+			
+			icon.src = "img/normal.png";
+		}
+	}
+	else {
+		row.dataset.disabled = true;
+		
+		icon.src = "img/disabled.png";
+	}
+	
+	return row;
+}
+
+function initLabel() {
+	var df = document.createDocumentFragment(),
+		option = document.createElement("option");
+
+	for (var label in window.labelData) {
+		option = document.createElement("option");
+		
+		option.text = label;
+		
+		df.appendChild(option);
+	}
+	
+	window.label.insertBefore(df, window.label.firstChild);
+}
+
+function onSearch(e) {
+	e.preventDefault();
+	
+	search();
+}
+
+function onReset(e) {
+	e.preventDefault();
+	
+	this.elements.keyword.value = "";
+	
+	search();
+}
+
+function onChangeLabel(e) {
+	form.elements.keyword.value = "";
+	
+	selectLabel(window.label.value);
+}
+
+function search() {
+	document.body.classList.add("loading");
+	// search 결과를 초기화 하기 위해
+	selectLabel(window.label.value);
+
+	filterDeviceList(form.elements.keyword.value);
+	
+	document.body.classList.remove("loading");
+}
+
+function clearDeviceList() {
+	var df = document.createDocumentFragment(),
+		row;
+	
+	while (row = list.firstChild) {
+		df.appendChild(row);
+	}
+	
+	return df;
+}
+
+function filterDeviceList(keyword) {
+	var row = clearDeviceList().firstChild,
+		next, cols,
+		df = document.createDocumentFragment(),
+		device;
+	
+	while (row) {
+		next = row.nextSibling;
+		
+		cols = row.children;
+		
+		for (var i=0, length=cols.length; i<length; i++) {
+			if (cols[i].textContent.indexOf(keyword) !== -1) {
+				df.appendChild(row);
+				
+				break;
+			}
+		}
+		
+		row = next;
+	}
+	
+	document.getElementById("count").dataset.value = df.children.length;
+	
+	list.appendChild(df);
+}
+
+function selectLabel(label) {
+	var df = document.createDocumentFragment(),
+		rows;
+	
+	for (var ip in window.deviceMapping) {
+		df.appendChild(window.deviceMapping[ip]);
+	}
+	
+	if (label) {
+		rows = [].slice.call(df.querySelectorAll("."+ label), 0);
+		
+		df = document.createDocumentFragment();
+		
+		for (var i=0, length=rows.length; i<length; i++) {
+			df.appendChild(rows[i]);
+		}
+	}
+	
+	document.getElementById("count").dataset.value = df.children.length;
+	
+	list.appendChild(df);
+}
+
+function onSelect (src, className) {
+	document.body.classList.remove("normal", "critical", "shutdown", "disabled");
+	
+	if (className) {
+		document.body.classList.add(className);
+	}
+	
+	icon.src = src;
+	
+	selector.blur();
+}
+
+function getIcon(type) {
+	return top.databases.icon[type] || top.databases.local.icon[type];
+}
+
+		</script>
+		
+	</head>
+	
+	<body class="loading">
+		<article class="content_width">
+			<aside>
+				<nav>
+					<div id="count"></div>
+					<div>
+						<select id="label">
+							<optgroup>
+								<option value="">모두 보기
+							</optgroup>
+						</select>
+					</div>
+					<div>
+						<label>
+							<input type="checkbox" id="unlabeled">미분류
+						</label>
+					</div>
+				</nav>
+				<form id="form">
+					<input type="text" name="keyword" placeholder="이름, 유형, IP주소 ">
+					<input type="submit" value="찾기">
+					<input type="reset" value="초기화">
+				</form>
+			</aside>
+			
+			<header>
+				<ul>
+					<li class="selector" tabindex="0">
+						<img id="icon" src="img/all.png">
+						<div>
+							<p title="장애 장비 보기" id="shutdown">
+								<img src="img/warning.png">
+							</p>
+							<p title="임계 장비 보기" id="critical">
+								<img src="img/siren.png">
+							</p>
+							<p title="정상 장비 보기" id="normal">
+								<img src="img/normal.png">
+							</p>
+							<p title="비활성 장비 보기" id="disabled">
+								<img src="img/disabled.png">
+							</p>
+							<p title="모든 장비 보기" id="all">
+								<img src="img/all.png">
+							</p>
+						</div>
+					<li>장비 이름
+					<li>장비 유형
+					<li>IP 주소
+					<li>
+					<li>
+					<li>
+					<li>
+				</ul>
+			</header>
+			
+			<div id="list"></div>
+		</article>
+		
+		<div class="bg_loading"></div>
+		<script>
+
+var form = document.getElementById("form"),
+	label = document.getElementById("label"),
+	list = document.getElementById("list"),
+	selector = document.querySelector(".selector"),
+	icon = document.getElementById("icon"),
+	deviceMapping = {},
+	labelData = {};
+
+label.addEventListener("change", onChangeLabel);
+
+window.form.addEventListener("submit", onSearch);
+window.form.addEventListener("reset", onReset);
+
+document.getElementById("shutdown").onclick = onSelect.bind(window, "img/warning.png", "shutdown");
+document.getElementById("critical").onclick = onSelect.bind(window, "img/siren.png", "critical");
+document.getElementById("normal").onclick = onSelect.bind(window, "img/normal.png", "normal");
+document.getElementById("disabled").onclick = onSelect.bind(window, "img/disabled.png", "disabled");
+document.getElementById("all").onclick = onSelect.bind(window, "img/all.png", "");
+
+document.getElementById("unlabeled").onclick = function () {
+	document.body.classList[this.checked? "add": "remove"]("unlabeled");
+};
+
+initList();
+
+initLabel();
+
+		</script>
+	
+	</body>
+	
+</html>

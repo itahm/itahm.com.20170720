@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<meta http-equiv="Content-Script-Type" content="text/javascript">
+		<meta http-equiv="Content-Style-Type" content="text/css">
+		<title>Event @ ITAhM</title>
+		
+		<style>
+@import "css/itahm.css";
+@import "css/calendar.css";
+
+body {
+	position: fixed; top: 0; right: 0; bottom: 0; left: 0;
+}
+
+h1, h2 {
+	color: #fff;
+}
+
+.content_width {
+	height: 99%;
+	padding: 10px;
+	margin: 0 auto;
+	display: flex;
+	flex-direction: column;
+}
+
+header {
+	position: relative;
+}
+
+.log {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+}
+
+header>nav {
+	position: absolute; top: 10px; right: 10px; 
+}
+
+#calendar {
+	position: absolute; top: 0; right: 0;
+	display: none;
+	background-color: #fff;
+	border: 1px solid #0084ff;
+	padding: 5px;
+}
+
+header>nav:hover> #calendar,
+#calendar:hover {
+	display: block;
+}
+
+ul {
+	list-style: none;
+	padding: 0; margin: 0;
+}
+
+.header {
+	padding: 3px 0;
+	border-bottom: 1px solid #aaa;
+	background-color: #0084ff;
+	color: #fff;
+	font-weight: bold;
+	margin: 5px 0;
+	box-shadow: 0 0 5px #fff inset;
+}
+
+.header li {
+	text-align: center;
+}
+
+.item li:not(:last-child) {
+	border-right: 1px solid transparent;
+}
+
+.header li:not(:last-child) {
+	border-right-color: #fff;
+}
+
+#list {
+	flex: 1;
+	background-color: #fafafa;
+	overflow-y: auto;
+}
+
+.item {
+	display: flex;
+	align-items: center;
+	border: 1px solid transparent;
+}
+
+.item li {
+	padding: 5px;
+	box-sizing: border-box;
+	overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.item li:nth-child(1) {
+	width: 3em;
+	text-align: center;
+}
+
+.item li:nth-child(2) {
+	width: 100px;
+	text-align: center;
+}
+
+.item li:nth-child(3) {
+	width: 200px;
+	text-align: center;
+}
+
+.item li:nth-child(4) {
+	flex: 1;
+}
+
+#list .item {
+	background-color: #fff;
+}
+
+#list .item.shutdown {
+	background-color: rgba(255, 0, 0, .2);
+}
+
+#list .item li:nth-child(1) img {
+	width: 24px;
+	height: 24px;
+}
+
+#list .item.critical {
+	background-color: rgba(255, 255, 0, .2);
+}
+
+#list .item:not(:last-child) {
+	border-bottom: 1px solid #eee;
+}
+
+
+		</style>
+		
+	</head>
+	
+	<body class="loading">
+	
+		<div class="content_width">
+			
+			<header>
+				<div>
+					<h1>이벤트 로그</h1>
+					<h2 id="date">Date</h2>
+				</div>
+				<nav>
+					<img src="img/calendar512.png" width="36" height="36">
+					<div id="calendar"></div>
+				</nav>
+			</header>
+			
+			<div class="log">
+				<div class="header">
+					<ul class="item">
+						<li>!
+						<li>시간
+						<li>대상
+						<li>이벤트 메세지 (<span id="count"></span>)
+					</ul>
+				</div>
+				<div id="list"></div>
+			</div>
+			
+		</div>
+		
+		<div class="bg_loading"></div>
+		
+		<script src="js/ITAhM.js"></script>
+		<script src="js/object.js"></script>
+		<script>
+if (top === window) {
+	throw "";
+}
+
+var iFrame = document.querySelector("iframe"),
+	date = document.getElementById("date"),
+	list = document.getElementById("list"),
+	item = document.querySelector(".item"),
+	today = new Date().setHours(0, 0, 0, 0);
+
+top.clearLog();
+
+new ITAhM.Calendar("calendar", function (date) {
+	sendRequest(date.getTime());
+});
+
+date.textContent = getDateString(today);
+
+sendRequest(today);
+
+function sendRequest(mills) {
+	document.body.classList.add("loading");
+	
+	var log;
+	while(log = window.list.firstChild) {
+		window.list.removeChild(log);
+	}
+	
+	top.sendRequest({
+		command: "extra",
+		extra: "log",
+		date: mills
+	}, function (data) {
+		var df = document.createDocumentFragment(),
+			indexArray = Object.keys(data);
+			count = indexArray.length;
+		
+		indexArray = indexArray.sort(function (a, b) {
+			return parseInt(a) - parseInt(b);
+		});
+		
+		for (var i=0; i<count; i++) {
+			df.appendChild(createItem(data[indexArray[i]]));
+		}
+		
+		window.list.appendChild(df);
+		
+		list.scrollTop = list.scrollHeight;
+		
+		document.getElementById("count").textContent = count;
+		
+		date.textContent = getDateString(mills);
+		
+		document.body.classList.remove("loading");
+	});
+}
+
+function createItem(log) {
+	var device = top.databases.device[log.ip],
+		ul = document.createElement("ul"), icon;
+	
+	icon = ul.appendChild(document.createElement("li")).appendChild(document.createElement("img"));
+	ul.appendChild(document.createElement("li")).textContent = toTimeString(log.date);
+	ul.appendChild(document.createElement("li")).textContent = (device && device.name) || log.ip;
+	ul.appendChild(document.createElement("li")).textContent = log.message;
+	
+	ul.classList.add("item");
+	
+	icon.src = log.status? "img/normal.png": log.type === "shutdown"? "img/warning.png": "img/siren.png";
+	
+	return ul;
+}
+
+function getDateString(mills) {
+	var date = new Date(mills),
+		yyyy = date.getFullYear(),
+		mm = date.getMonth() +1,
+		dd = date.getDate();
+	
+	return yyyy +"년 "+ (mm > 9? "": "0") + mm +"월"+ (dd > 9? "": "0") + dd +"일";
+}
+
+function toTimeString(mills) {
+	var date = new Date(mills),
+		hh = date.getHours(),
+		mm = date.getMinutes(),
+		ss = date.getSeconds();
+	
+	return (hh > 9? "": "0") + hh +":"+ (mm > 9? "": "0") + mm +":"+ (ss > 9? "": "0") + ss;
+}
+
+		</script>
+	
+	</body>
+	
+</html>

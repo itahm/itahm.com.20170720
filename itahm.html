@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<meta http-equiv="Cache-Control" content="no-cache">
+		
+		<title>Main @ ITAhM</title>
+		
+		<style>
+@import "css/itahm.css";
+
+header {
+	position: fixed; top: 0; right: 0; left: 0; height: 80px;
+	transition: height .5s;
+	background-color: #4d525a;
+	color: #fff;
+	overflow: hidden;
+	display: flex;
+	justify-content: center;
+}
+
+header::before {
+	content: "";
+	position: absolute; right: 0; left: 0; bottom: 0;
+	height: 3px;
+	background-color: #ccc;
+}
+
+header:not(:hover) {
+	height: 0;
+}
+
+header a,
+header a:visited,
+header a:link,
+header a:active,
+header a:hover {
+	color: inherit;
+	text-decoration: none;
+	cursor: pointer;
+	display: inline-block;
+	height: 100%;
+}
+
+nav {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+
+nav ul {
+	list-style: none;
+	padding: 0;
+	display: flex;
+}
+
+nav ul:first-child a {
+	text-shadow: 1px 1px 1px #000;
+	padding: .2em 1em;
+	border-radius: 1em;
+}
+
+nav ul:first-child a:hover {
+	color: #4d525a;
+	text-shadow: none;
+	background-color: #fff;
+}
+
+nav ul:last-child {
+	color: #999;
+}
+
+nav ul:last-child a:hover {
+	color: #fff;
+}
+
+nav h1 {
+	color: #fff;
+	font-size: 16px;
+}
+
+nav ul:last-child li {
+	margin: 5px;
+}
+
+section {
+	position: fixed; top: 0; right: 0; bottom: 0; left: 0;
+	display: flex;
+}
+
+#frame {
+	flex: 1;
+	width: 100%; height: 100%;
+	border: none;
+	background-color: #4d525a;
+}
+
+#dialog {
+	position: fixed; top: 0; right: 0; bottom: 0; left: 0;
+	padding: 0;
+	margin: 0;
+	width: 100%;
+	height: 100%;
+}
+
+.log {
+	position: fixed; right: 10px; top: 10px;
+	cursor: pointer;
+}
+
+.log span {
+	display: inline-block;
+	font-weight: bold;
+	background-color: #ffa500;
+	color: #fff;
+}
+
+#signout:before {
+	content: attr(title);
+}
+
+#signout:hover:before {
+	content: "로그아웃";
+}
+
+#count {
+	width: 2em; height: 2em;
+	box-sizing: border-box;
+	padding: .5em;
+	border-radius: 1em;
+	text-align: center;
+}
+
+#log {
+	padding: .5em .5em .5em 1em;
+	margin-left: 1em;
+	border-radius: 1em 0 0 1em;
+}
+
+.handle {
+	position: fixed; top: -1em; left: 50%;
+	border: 1em solid red;
+	border-radius: 50%;
+	transform: translateX(-50%);
+}
+
+.handle:hover+ header {
+	height: 60px;
+}
+
+
+body:not(.log) .log,
+body:not(.dialog) #dialog {
+	display: none;
+}
+
+		</style>
+	<script src="js/google.js"></script>
+	<script>
+	
+function showChart(ip) {
+	var chart = window.chart[ip];
+
+	if (chart && !chart.closed) {
+		chart.focus();
+	}
+	else {
+		window.chart[ip] = window.open("status.html?"+ ip);
+	}
+}
+	
+	</script>
+	</head>
+	
+	<body>
+		
+		<section>
+			<iframe id="frame" name="main"></iframe>
+		</section>
+		
+		<div class="handle"></div>
+		
+		<header>
+			<nav class="content_width">
+				<ul>
+					<li><h1><a href="dashboard.html" target="main">대쉬보드</a></h1>
+					<li><h1><a href="list.html" target="main">장비목록</a></h1>
+					<li><h1><a href="map.html" target="main">구성도</a></h1>
+					<!--li><h1><a href="ip.html" target="main">IP주소</a></h1-->
+					<li><h1><a href="event.html" target="main">이벤트</a></h1>
+					<li><h1><a href="report.html" target="main">리포트</a></h1>
+				</ul>
+				<ul>
+					<li><a id="signout"></a>
+					<li><a href="setting.html" target="main">설정</a>
+					<li><a href="icon.html" target="main">아이콘</a>
+					<li><a id="message">메세지</a>
+					<li><a id="reload">재시작</a>
+				</ul>
+			</nav>
+		</header>
+		
+		<div class="log">
+			<span id="count">99</span>
+			<span id="log">message</span>
+		</div>
+		
+		<iframe id="dialog"></iframe>
+		
+		<script src="js/ITAhM.js"></script>
+		<script src="js/object.js"></script>
+		<script src="js/icon.js"></script>
+		<script>
+var count = document.getElementById("count"),
+	dialog = document.getElementById("dialog"),
+	log = document.getElementById("log"),
+	chart = {},
+	logCount = 0;
+
+window.onbeforeunload = function () {
+	return "close ITAhM.";
+};
+
+window.onunload = function () {
+	for (var ip in window.chart) {
+		window.chart[ip].close();
+	}
+};
+
+document.getElementById("reload").onclick = function () {
+	window.onbeforeunload = undefined;
+	
+	location.reload();
+};
+
+document.getElementById("message").onclick = function () {
+	window.dialog.onload = undefined;
+	window.dialog.src = "message.html";
+	
+	document.body.classList.add("dialog");
+};
+
+document.querySelector('div[class="log"]').onclick = function() {
+	document.getElementById("frame").src = "event.html";
+};
+
+document.getElementById("signout").onclick = function () {
+	if (confirm("로그아웃 하겠습니까?")) {
+		sendRequest({
+				command: "signout"
+			}, function () {
+				window.onbeforeunload = undefined;
+				
+				location.href = "connect.html";
+			});
+	}
+};
+
+(function (window, undefined){
+	
+	if (sessionStorage.host && sessionStorage.port) {
+		var xhr = new ITAhM.Communicator(sessionStorage.host, sessionStorage.port, 5000);
+		
+		window.sendRequest = function (request, onResponse) {
+			xhr.sendRequest(request, function (status, response) {		
+				if (status === 200) {
+					onResponse(response);
+				}
+				else {
+					if (status === 401) {
+						window.onbeforeunload = undefined;
+					
+						alert("세션이 만료되었습니다.");
+						
+						location.href = "connect.html";
+					}
+					else if (status === 409) { // conflict
+						alert("다른 관리자 계정이 데이터베이스를 수정하였습니다.");
+					}
+					else if (status === 400) { // bad request
+						alert("잘못된 요청입니다.\n"+ response.error);
+					}
+					else {
+						alert("에이전트가 응답하지 않습니다.\nstatus: "+ status);
+					}
+				}
+			});
+		}
+		
+		var thread = new Worker("initialize.js");
+		
+		thread.onmessage = function (e) {
+			var event = e.data;
+			
+			if (event) {
+				switch (event.type) {
+				case "initialize":
+					var databases = event.value;
+					
+					window.databases = databases;
+					
+					/*
+					var monitor;
+					var x = {};
+					for (var ip in databases.monitor) {
+						monitor = databases.monitor[ip];
+						if (monitor.protocol == "snmp") {
+							sendRequest({
+								command: "select",
+								ip: ip
+							}, function (ip, data) {
+								if (Object.keys(data.ifEntry).length === 1) {
+									console.log(data.sysObjectID, ip);
+									x[data.sysObjectID] = true;
+								}
+								else {
+									console.log(Object.keys(data.ifEntry).length);
+								}
+							}.bind(null, ip));
+						}
+					}
+					setTimeout(function () {
+						for (var id in x) {
+							console.log(id);
+						}
+					}, 5000);	
+					*/
+					
+					databases.local.scale = 1;
+					
+					databases.local.icon = ITAhM.iconData;
+					// TODO ITAhM의 시작.
+					document.title = sessionStorage.host +" @ ITAhM";
+					
+					document.getElementById("frame").src = "dashboard.html";
+					
+					break;
+					
+				case "event":
+					var eventData = event.value;
+					
+					window.logCount++;
+					
+					window.count.textContent = window.logCount > 9? "9+": window.logCount;
+					window.log.textContent = getDeviceName(eventData.ip) +" "+ eventData.message;
+					
+					document.body.classList.add("log");
+					
+					sendRequest({
+							command: "pull",
+							database: "monitor"
+						}
+						, function (data) {
+							window.databases.monitor = data;
+							
+							try {
+								document.getElementById("frame").contentWindow.onEvent(eventData.ip);
+							} catch(e) {}
+						});
+					
+					break;
+					
+				case "error":
+					alert("Agent is not responding.");
+					
+					window.onbeforeunload = undefined;
+					
+					location.href = "connect.html";
+					
+					break;
+				}
+			}
+			else {
+				window.onbeforeunload = undefined;
+			
+				alert("에이전트가 올바르게 응답하지 않습니다.\n\n"
+						+"에이전트의 버전을 확인하십시오.");
+				
+				location.href = "/";
+			}
+		};
+		
+		document.getElementById("signout").title = sessionStorage.getItem("user");
+		
+		thread.postMessage("http://"+sessionStorage.host +":"+ sessionStorage.port);
+	}
+	else {
+		location.href = "/";
+	}
+	
+}) (window);
+
+function getDeviceName(ip) {
+	var device = window.databases.device[ip];
+
+	return device? device.name: ip;
+}
+
+function showDialog() {
+	var opener = this,
+		url = Array.prototype.shift.call(arguments),
+		args = arguments;
+	
+	window.dialog.onload = function () {
+		this.contentWindow.initialize.apply(opener, args);
+		
+		document.body.classList.add("dialog");
+	};
+	
+	window.dialog.src = url;
+}
+
+function closeDialog() {
+	document.body.classList.remove("dialog");
+}
+
+function clearLog() {
+	window.logCount = 0;
+	
+	document.body.classList.remove("log");
+}
+
+		</script>
+	
+	</body>
+	
+</html>

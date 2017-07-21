@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<meta http-equiv="Content-Script-Type" content="text/javascript">
+		<meta http-equiv="Content-Style-Type" content="text/css">
+		<title>Setting @ ITAhM</title>
+		
+		<style>
+@import "css/itahm.css";
+
+body {
+	position: fixed; top: 0; right: 0; bottom: 0; left: 0;
+}
+
+.main {
+	margin: auto;
+	padding: 1em;
+	height: 99%;
+	box-sizing: border-box;
+	background-color: #fafafa;
+	overflow: auto;
+}
+
+ul {
+	list-style: none;
+	padding: 0;
+}
+
+.item {
+	display: flex;
+	align-items: center;
+}
+
+.item span {
+	margin-left: 10px;
+	padding: .5em 1em;
+	border: 1px solid transparent;
+}
+
+.item span:hover {
+	cursor: pointer;
+	text-decoration: underline;
+	border-radius: 1em;
+	background-color: #0084ff;
+	color: #fff;
+}
+
+.layout {
+	display: none;
+}
+
+img[src="img/plus.png"]:hover {
+	cursor: pointer;
+}
+
+.list {
+	max-height: 100px;
+	overflow: auto;
+	padding: 1em;
+	border: 1px solid #ddd;
+	background-color: #fdfdfd;
+}
+
+#resources li {
+	overflow: hidden;
+}
+
+#resources li:not(:first-child):hover::after {
+	content: "";
+	border: .5em solid transparent;
+	border-bottom-color: #0084ff;
+	display: inline-block;
+	
+}
+
+#resources li:not(:first-child):hover {
+	cursor: default;
+}
+
+#resources input[type=checkbox] {
+	vertical-align: middle;
+}
+
+form input,
+form select {
+	padding: 3px;
+}
+
+input[name="clean"] {
+	width: 50px;
+	text-align: right;
+}
+
+#common li {
+	margin: .5em 0;
+}
+
+body:not(.gcm) #gcm input[type=image],
+body:not(.gcm) #gcm input[type=checkbox],
+body.gcm #gcm input[type=text],
+body.gcm #gcm input[type=submit],
+body.gcm #gcm i,
+#syslog {
+	display: none;
+}
+
+		</style>
+		<script>
+		
+function initAccount() {
+	var list = document.getElementById("account_list"),
+		accountData = top.databases.account,
+		df = document.createDocumentFragment();
+	
+	for (var username in accountData) {
+		df.appendChild(createItem(accountData[username].level === 0? "img/svg/root.svg": "img/svg/user.svg", username, onSelectAccount));
+	}
+	
+	list.appendChild(df);
+}
+
+function initProfile() {
+	var list = document.getElementById("profile_list"),
+		profileData = top.databases.profile,
+		df = document.createDocumentFragment();
+	
+	for (var name in profileData) {
+		df.appendChild(createItem("img/svg/list.svg", name, onSelectProfile));
+	}
+	
+	list.appendChild(df);
+}
+
+function initSMS() {
+	var list = document.getElementById("sms_list"),
+		smsData = top.databases.sms,
+		df = document.createDocumentFragment();
+	
+	for (var id in smsData) {
+		df.appendChild(createItem("img/sms_list.png", id, onSelectSMS));
+	}
+	
+	list.appendChild(df);
+}
+
+function initGCM() {
+	var list = document.getElementById("gcm_list"),
+		alarmData = top.databases.gcm,
+		df = document.createDocumentFragment();
+	
+	for (var id in alarmData) {
+		df.appendChild(createItem("img/svg/alarm.svg", id, onSelectGCM));
+	}
+	
+	list.appendChild(df);
+}
+
+function onSelectAccount(username) {
+	top.showDialog.call(window, "account_dialog.html", username);
+}
+
+function onSelectProfile(name) {
+	top.showDialog.call(window, "profile_dialog.html", name);
+}
+
+function onSelectGCM(id) {
+	top.showDialog.call(window, "gcm_dialog.html", id);
+}
+
+function createItem(src, key, func) {
+	var clone = window.listItem.cloneNode(true);
+	
+	clone.children[0].src = src;
+	clone.children[1].textContent = key;
+	clone.children[1].onclick = func.bind(undefined, key);
+	
+	return clone;
+}
+
+function initConfig() {
+	var configData = top.databases.config;
+	
+	document.querySelector("input[name=clean]").value = configData.clean;
+	document.querySelector("select[name=display]").value = configData.display || "name";
+	document.getElementById("java").textContent = configData.java;
+	document.getElementById("version").textContent = configData.version;
+	document.getElementById("load").textContent = (function (load) {
+		if (!load){
+			return 0;
+		}
+		
+		return Object.values(load).join(", ");
+	})(configData.load);
+	
+	document.getElementById("resource").textContent = configData.resource || 0;
+	document.getElementById("space").textContent = ITAhM.util.toBytesString(configData.space);
+	
+	if ("dashboard" in configData) {
+		var resources = configData.dashboard,
+			orders = [].sort.call(Object.keys(resources), function (a, b) {
+				return parseInt(b) - parseInt(a);
+			}), resource;
+		
+		for (var i=0, _i=orders.length; i<_i; i++) {
+			resource = resources[orders[i]];
+			
+			window.resources.insertBefore(window.resources.querySelector("li[data-value="+ resource +"]"), window.resources.firstElementChild);
+			window.resources.querySelector("input[name="+ resource +"]").checked = true;
+		}
+	}
+	else {
+		[].forEach.call(window.resources.querySelectorAll("input[type=checkbox]"), function (resource) {
+			resource.checked = true;
+		});
+	}
+}
+
+function onSetStorage(clean) {
+	document.body.classList.add("loading");
+	
+	var clean = parseInt(clean.value);
+	
+	top.sendRequest({
+		command: "config",
+		key: "clean",
+		value: clean
+	}, function (response) {
+		document.body.classList.remove("loading");
+		
+		top.databases.config.clean = clean;
+		
+		alert("데이터 보관 기간을 설정하였습니다.");
+		
+		document.body.classList.add("gcm");
+	});
+}
+
+function onDump(date) {
+	document.body.classList.add("loading");
+	
+	top.sendRequest({
+		command: "extra",
+		extra: "syslog",
+		date: new Date(date.value).setHours(0, 0, 0, 0)
+	}, function (data) {
+		document.body.classList.remove("loading");
+		
+		var doc = window.open().document;
+		
+		doc.title = "Dump @ ITAhM";
+		doc.write(data.log || "No data.");
+	});
+}
+
+function onOrderResources(e) {
+	var li = e.target, ul;
+	
+	if (li.nodeName.toLowerCase() !== "li" || !li.previousElementSibling) {
+		return;
+	}
+	
+	li.parentNode.insertBefore(li, li.previousElementSibling);
+}
+
+function onModifyDashboard() {
+	var elements = window.resources.children,
+		li
+		resources = {};
+	
+	for (var i=0, _i=elements.length; i<_i; i++) {
+		li = elements[i];
+		
+		if (li.querySelector("input:checked")) {
+			resources[i.toString()] = elements[i].dataset.value;
+		}
+	}
+	
+	if (Object.keys(resources).length == 0 && !confirm("선택한 리소스가 없습니다.\n대쉬보드에 리소스 정보를 표시하지 않겠습니까?")) {
+		return;
+	}
+	
+	document.body.classList.add("loading");
+	
+	top.sendRequest({
+		command: "config",
+		key: "dashboard",
+		value: resources
+	}, function (response) {
+		document.body.classList.remove("loading");
+		
+		top.databases.config.dashboard = resources;
+		
+		alert("대쉬보드 리소스 정보를 변경하였습니다.");
+	});
+}
+
+function onModifyDisplay(display) {
+	document.body.classList.add("loading");
+	
+	top.sendRequest({
+		command: "config",
+		key: "display",
+		value: display.value
+	}, function (response) {
+		document.body.classList.remove("loading");
+		
+		top.databases.config.display = display.value;
+		
+		alert("장비 표시 방식을 변경하였습니다.");
+	});
+}
+
+function onSelectSMS(id) {
+	top.showDialog.call(window, "sms_dialog.html", id);
+}
+
+function onModifyGCM(host) {
+	if (document.body.classList.contains("gcm")) {
+		onSelectGCM();
+	}
+	else {
+		if (host.value === "") {
+			return host.focus();
+		}
+		
+		document.body.classList.add("loading");
+		
+		top.sendRequest({
+			command: "config",
+			key: "gcm",
+			value: host.value
+		}, function (response) {
+			document.body.classList.remove("loading");
+			
+			top.databases.config.gcm = host.value;
+		
+			document.body.classList.add("gcm");
+			
+			alert("구글 클라우드 메세징 서비스를 사용하도록 설정하였습니다.");
+		});
+	}
+}
+
+function onDisableGCM() {
+	if (confirm("구글 클라우드 메세징 서비스를 사용하지 않도록 설정합니다.")) {
+		top.sendRequest({
+			command: "config",
+			key: "gcm",
+			value: null
+		}, function (response) {
+			document.body.classList.remove("loading");
+			
+			top.databases.config.gcm = null;
+		
+			document.body.classList.remove("gcm");
+		});
+	}
+}
+
+function onEnableSMS(e) {
+	var checked = this.checked;
+	
+	if (confirm("SMS 발송 기능을 "+
+		(checked? "사용 하도록": "사용하지 않도록") +
+		"설정하겠습니까?")) {
+	
+		top.sendRequest({
+			command: "config",
+			key: "sms",
+			value: checked
+		}, function (response) {
+			top.databases.config.sms = checked;
+		
+			window.location.reload();
+		});
+	}
+	else {
+		e.preventDefault();
+	}
+}
+
+function initialize() {
+	initConfig();
+	initAccount();
+	initProfile();
+	initGCM();
+	initSMS();
+	
+	if (top.databases.config.gcm !== undefined && top.databases.config.gcm !== null) {
+		document.body.classList.add("gcm");
+	}
+	
+	window.sms.elements["enable"].checked = top.databases.config.sms? true: false;
+	
+	document.body.classList.remove("loading");
+}
+
+		</script>
+	</head>
+	
+	<body class="loading">
+		<div class="main content_width">
+			<form id="common">
+				<h2>일반</h2>
+				<ul>
+					<li>자바 버전 : <span id="java"></span>
+					<li>에이전트 버전 : <span id="version"></span>
+					<li>에이전트 저장공간 여유 : <span id="space"></span>
+					<li>데이터베이스 로드 : <span id="load"></span>
+					<li>관리 리소스 갯수 : <span id="resource"></span>
+					<li>
+						데이터 보관 기간 : <input type="number" min="0" max="365" name="clean"> 일 <input type="submit" value="적용" disabled>
+						<i>(데이터 정리 기능을 사용하지 않는 경우 0)</i>
+				</ul>
+			</form>
+			<form id="display">
+				<h2>장비 표시</h2>
+				<ul>
+					<li>
+						<select name="display">
+							<option value="name" selected>장비명
+							<option value="address">IP 주소
+						</select>
+						<input type="submit" value="적용" disabled>
+				</ul>
+			</form>
+			<form id="dashboard">
+				<h2>대쉬보드</h2>
+				<ul id="resources">
+					<li data-value="responseTime"><input type="checkbox" name="responseTime">응답속도
+					<li data-value="processor"><input type="checkbox" name="processor">프로세서 로드
+					<li data-value="memory"><input type="checkbox" name="memory">메모리 사용량
+					<li data-value="memoryRate"><input type="checkbox" name="memoryRate">메모리 사용율
+					<li data-value="storage"><input type="checkbox" name="storage">스토리지 사용량
+					<li data-value="storageRate"><input type="checkbox" name="storageRate">스토리지 사용율
+					<li data-value="throughput"><input type="checkbox" name="throughput">통신 사용량
+					<li data-value="throughputRate"><input type="checkbox" name="throughputRate">통신 사용율
+					<li data-value="throughputErr"><input type="checkbox" name="throughputErr">통신 오류
+					<li data-value="failureRate"><input type="checkbox" name="failureRate">snmp 오류
+				</ul>
+				<input type="submit" value="적용" disabled>
+			</form>
+			<form id="account">
+				<h2>계정 <input type="image" src="img/plus.png" title="계정 추가" disabled></h2>
+				<ul id="account_list" class="list"></ul>
+			</form>
+			
+			<form id="profile">
+				<h2>프로파일 <input type="image" src="img/plus.png" title="프로파일 추가" disabled></h2>
+				<ul id="profile_list" class="list"></ul>
+				<i>등록된 Profile은 변경할 수 없습니다. 삭제후 추가하십시오. (사용중인 Profile은 삭제할 수 없습니다.)</i>
+			</form>
+			
+			<form id="sms">
+				<h2>
+					<input type="checkbox" name="enable">
+					SMS
+					<input type="image" src="img/plus.png" title="알림 추가" disabled>
+				</h2>
+				<ul id="sms_list" class="list"></ul>
+			</form>
+			
+			<form id="gcm">
+				<h2><input type="checkbox" name="disable" checked title="중지">GCM(Google Cloud Messaging) <input type="image" src="img/plus.png" title="알림 추가" disabled></h2>
+				<input type="text" name="host"><input type="submit" value="사용">
+				<i>(알림에 표시할 에이전트 이름을 입력하십시오.)</i>
+				<ul id="gcm_list" class="list"></ul>
+			</form>
+			
+			<form id="syslog">
+				<input type="text" name="date" required>
+				<input type="submit" value="dump">
+			</form>
+			<div class="bg_loading"></div>
+			
+			<div class="layout">
+				<ul>
+					<li class="item">
+						<img width="20" height="20">
+						<span></span>
+				</ul>
+			</div>
+		</div>
+		<script src="js/ITAhM.js"></script>
+		<script>
+
+var resources = document.getElementById("resources"),
+	sms = document.getElementById("sms"),
+	listItem = document.querySelector(".item"),
+	gcm = document.getElementById("gcm");
+	
+window.gcm.elements["host"].value = sessionStorage.host;
+
+if (sessionStorage.level == 0) {
+	[].forEach.call(document.querySelectorAll("input[type=submit], input[type=image]"), function (input) {
+		input.disabled = false;
+	});
+}
+
+document.getElementById("account").onsubmit = function (e) {
+	e.preventDefault();
+	
+	onSelectAccount();
+};
+
+document.getElementById("profile").onsubmit = function (e) {
+	e.preventDefault();
+	
+	onSelectProfile();
+};
+
+document.getElementById("profile").onsubmit = function (e) {
+	e.preventDefault();
+	
+	onSelectProfile();
+};
+
+document.getElementById("common").onsubmit = function (e) {
+	e.preventDefault();
+	
+	onSetStorage(this.elements["clean"]);	
+};
+
+document.getElementById("syslog").onsubmit = function (e) {
+	e.preventDefault();
+	
+	onDump(this.elements["date"]);
+};
+
+window.gcm.elements["disable"].onclick = function (e) {
+	e.preventDefault();
+
+	onDisableGCM();
+};
+
+window.gcm.onsubmit = function (e) {
+	e.preventDefault();
+	
+	onModifyGCM(this.elements["host"]);
+};
+
+window.sms.elements["enable"].onclick = onEnableSMS;
+
+window.sms.onsubmit = function (e) {
+	e.preventDefault();
+	
+	onSelectSMS();
+};
+
+document.getElementById("display").onsubmit = function (e) {
+	e.preventDefault();
+	
+	onModifyDisplay(this.elements["display"]);
+};
+
+document.getElementById("dashboard").onsubmit = function (e) {
+	e.preventDefault();
+	
+	onModifyDashboard();
+};
+
+window.resources.onclick = onOrderResources;
+
+initialize();
+
+		</script>
+	
+	</body>
+	
+</html>
